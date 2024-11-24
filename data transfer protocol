@@ -1,0 +1,81 @@
+import random
+import time
+
+# Simulate an unreliable channel with packet loss and errors
+def unreliable_channel(packet, loss_prob=0.1, error_prob=0.05):
+    # Simulate packet loss
+    if random.random() < loss_prob:
+        print("Packet lost!")
+        return None
+    
+    # Simulate bit error (flipping a bit randomly)
+    if random.random() < error_prob:
+        packet = packet[::-1]  # Reverse the packet to simulate bit error
+        print("Packet corrupted!")
+    
+    return packet
+
+# Sender Side (Stop-and-Wait Protocol with Timeout)
+def sender_with_timeout(data, loss_prob=0.1, error_prob=0.05, timeout=5):
+    seq_num = 0
+    for packet in data:
+        packet_with_seq = f"{seq_num}:{packet}"
+        print(f"Sending packet: {packet_with_seq}")
+        
+        start_time = time.time()
+        while True:
+            # Send the packet through the unreliable channel
+            received_packet = unreliable_channel(packet_with_seq, loss_prob, error_prob)
+            
+            if received_packet:
+                ack = receive_ack(received_packet)
+                if ack == seq_num:
+                    print(f"ACK {ack} received for packet {seq_num}")
+                    break
+                else:
+                    print(f"Invalid ACK received. Expected: {seq_num}, Got: {ack}. Retrying...")
+            
+            # Timeout condition
+            if time.time() - start_time > timeout:
+                print("Timeout occurred. Resending the packet...")
+                break
+            time.sleep(1)  # Simulate network delay
+
+        seq_num = 1 - seq_num  # Alternate sequence numbers (0, 1)
+
+# Receiver Side (Acknowledgment)
+def receive_ack(packet):
+    seq_num = int(packet.split(":")[0])  # Extract sequence number
+    print(f"Received packet: {packet}")
+    
+    # Simulate acknowledgment (return the sequence number back)
+    return seq_num
+
+# Function to get user input for network parameters
+def get_user_input():
+    # Get packet loss and error probabilities from the user
+    loss_prob = float(input("Enter packet loss probability (e.g., 0.1 for 10%): "))
+    error_prob = float(input("Enter error probability (e.g., 0.05 for 5%): "))
+    
+    # Get timeout duration
+    timeout = int(input("Enter timeout duration in seconds: "))
+    
+    # Get the data to be sent
+    data = []
+    print("Enter the messages to send. Type 'done' when finished:")
+    
+    while True:
+        message = input("Enter message: ")
+        if message.lower() == "done":
+            break
+        data.append(message)
+    
+    return loss_prob, error_prob, timeout, data
+
+# Main function to run the simulation
+if __name__ == "__main__":
+    # Get user input for simulation parameters
+    loss_prob, error_prob, timeout, data = get_user_input()
+    
+    # Run the sender with the user input
+    sender_with_timeout(data, loss_prob, error_prob, timeout)
